@@ -8,7 +8,9 @@ connect();
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const user = await User.findById(params.id);
+        const user = await User.findById(params.id)
+            .select("-password -verifyToken -verifyTokenExpiry -forgotPasswordToken -forgotPasswordTokenExpiry")
+            .lean();
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }

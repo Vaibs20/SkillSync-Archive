@@ -14,6 +14,24 @@ const userSchema = new mongoose.Schema({
     availability: { type: String, default: "" },
     isOnboarded: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
+    contacts: { type: [mongoose.Schema.Types.ObjectId], ref: "User", default: [] },
+    connectionRequests: {
+        type: [{
+            from: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            createdAt: { type: Date, default: Date.now },
+        }],
+        default: [],
+    },
+    notifications: {
+        type: [{
+            message: { type: String },
+            type: { type: String },
+            from: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            createdAt: { type: Date, default: Date.now },
+            read: { type: Boolean, default: false },
+        }],
+        default: [],
+    },
     forgotPasswordToken: String,
     forgotPasswordTokenExpiry: Date,
     verifyToken: String,
