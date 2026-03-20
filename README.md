@@ -1,3 +1,5 @@
+⚠️Archived initial version⚠️
+
 # SkillSync
 
 SkillSync is a full-stack, skill-based networking platform designed to connect students, professionals, and learners for collaborative learning and study group formation. By leveraging detailed user profiles and a powerful search feature, SkillSync enables users to find peers based on skills, interests, career goals, and availability. The platform is built with modern web technologies, ensuring a secure, responsive, and user-friendly experience.
