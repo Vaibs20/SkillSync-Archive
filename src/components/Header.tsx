@@ -1,7 +1,7 @@
 //src/components/Header.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -13,12 +13,44 @@ import Button from "@/components/ui/Button";
 const Header = () => {
     const { isLoggedIn, user, logout: contextLogout, loading } = useAuthContext();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [incomingPendingCount, setIncomingPendingCount] = useState(0);
     const router = useRouter();
+
+    const refreshConnectionSummary = async () => {
+        if (!isLoggedIn) {
+            setIncomingPendingCount(0);
+            return;
+        }
+
+        try {
+            const res = await axios.get("/api/connections/summary");
+            setIncomingPendingCount(res.data.incomingPendingCount || 0);
+        } catch {
+            setIncomingPendingCount(0);
+        }
+    };
+
+    useEffect(() => {
+        if (loading || !isLoggedIn) {
+            setIncomingPendingCount(0);
+            return;
+        }
+
+        refreshConnectionSummary();
+
+        const handleConnectionsChanged = () => {
+            refreshConnectionSummary();
+        };
+
+        window.addEventListener("connections:changed", handleConnectionsChanged);
+        return () => window.removeEventListener("connections:changed", handleConnectionsChanged);
+    }, [isLoggedIn, loading]);
 
     const handleLogout = async () => {
         try {
             await axios.post("/api/auth/logout");
             contextLogout();
+            setIncomingPendingCount(0);
             toast.success("Logged out successfully");
             setIsSidebarOpen(false);
             router.push("/login");
@@ -41,6 +73,13 @@ const Header = () => {
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-200 transition-all duration-200 group-hover:w-full"></span>
         </Link>
     );
+
+    const ContactsBadge = () =>
+        incomingPendingCount > 0 ? (
+            <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-pink-500 px-1.5 py-0.5 text-xs font-bold text-white">
+                {incomingPendingCount > 9 ? "9+" : incomingPendingCount}
+            </span>
+        ) : null;
 
     if (loading) {
         return (
@@ -65,7 +104,10 @@ const Header = () => {
                         <>
                             <NavLink href="/dashboard">Dashboard</NavLink>
                             <NavLink href="/search">Search</NavLink>
-                            <NavLink href="/contacts">Contacts</NavLink>
+                            <div className="flex items-center">
+                                <NavLink href="/contacts">Contacts</NavLink>
+                                <ContactsBadge />
+                            </div>
                             <NavLink href="/study">Study</NavLink>
                             <Link href="/profile" className="hover:scale-105 transition-transform duration-200">
                                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
@@ -141,7 +183,10 @@ const Header = () => {
                                     </div>
                                     <NavLink href="/dashboard" onClick={() => setIsSidebarOpen(false)}>Dashboard</NavLink>
                                     <NavLink href="/search" onClick={() => setIsSidebarOpen(false)}>Search</NavLink>
-                                    <NavLink href="/contacts" onClick={() => setIsSidebarOpen(false)}>Contacts</NavLink>
+                                    <div className="flex items-center">
+                                        <NavLink href="/contacts" onClick={() => setIsSidebarOpen(false)}>Contacts</NavLink>
+                                        <ContactsBadge />
+                                    </div>
                                     <NavLink href="/study" onClick={() => setIsSidebarOpen(false)}>Study</NavLink>
                                     <NavLink href="/profile" onClick={() => setIsSidebarOpen(false)}>Profile</NavLink>
                                     <Button variant="outline" onClick={handleLogout} className="border-white/30 text-white hover:bg-white/10 mt-4">

@@ -1,38 +1,78 @@
 import axios from "axios";
-import { NextResponse } from "next/server";
+import { connect } from "@/dbConfig/dbConfig";
+import { AuthError, getCurrentUserId } from "@/lib/apiAuth";
+import { SAFE_USER_FIELDS, serializeSafeUser } from "@/lib/users";
+import { NextRequest, NextResponse } from "next/server";
 import User from "@/models/User";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
+    const currentUserId = getCurrentUserId(req);
     const { searchParams } = new URL(req.url);
 
-    // Combine all query params into a single string
-    const query = Array.from(searchParams.values()).join(" ");
+    const getText = (key: string) => searchParams.get(key)?.trim() || "";
+    const getList = (key: string) =>
+      searchParams
+        .getAll(key)
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+    const criteria = {
+      name: getText("name"),
+      email: getText("email"),
+      branch: getText("branch"),
+      passing_year: getText("passing_year"),
+      known_skills: getList("known_skills"),
+      career_path: getList("career_path"),
+      experience: getText("experience"),
+      learning_goal: getText("learning_goal"),
+      availability: getText("availability"),
+      isOnboarded: getText("isOnboarded"),
+      isVerified: getText("isVerified"),
+    };
+
+    const query = [
+      criteria.branch,
+      criteria.passing_year,
+      ...criteria.known_skills,
+      ...criteria.career_path,
+      criteria.experience,
+      criteria.learning_goal,
+      criteria.availability,
+      criteria.isOnboarded,
+      criteria.isVerified,
+    ].filter(Boolean).join(" ");
 
     // 1️⃣ Fetch users
-    const users = await User.find({}).lean();
+    await connect();
 
-    const formattedUsers = users.map((user: any) => ({
-      ...user,
-      _id: user._id.toString()
-    }));
+    const users = await User.find({ _id: { $ne: currentUserId } }).select(SAFE_USER_FIELDS).lean();
+
+    const formattedUsers = users.map((user: any) => serializeSafeUser(user));
 
     // 2️⃣ Call ML API
     const response = await axios.post("http://localhost:8000/search", {
       query,
-      users: formattedUsers
+      users: formattedUsers,
+      criteria,
     });
 
     const ranked = response.data.results;
+    const usersById = new Map(formattedUsers.map((user: any) => [user?._id, user]));
 
     // 3️⃣ Map results
-    const rankedUsers = ranked.map((r: any) =>
-      formattedUsers.find((u: any) => u._id === r._id)
-    ).filter(Boolean);
+    const rankedUsers = ranked.map((result: any) => {
+      const user = usersById.get(result._id);
+      return user ? { ...user, final_score: result.final_score } : null;
+    }).filter(Boolean);
 
     return NextResponse.json(rankedUsers);
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Search error:", error);
     return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }

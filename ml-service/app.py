@@ -1,40 +1,22 @@
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI
 from pydantic import BaseModel
+
 from model import SkillSyncModel
 
+
 app = FastAPI()
-model = SkillSyncModel("dummy.csv")  # not used now
+model = SkillSyncModel("dummy.csv")
+
 
 class SearchRequest(BaseModel):
-    query: str
-    users: list
+    query: str = ""
+    users: List[Dict[str, Any]]
+    criteria: Optional[Dict[str, Any]] = None
+
 
 @app.post("/search")
 def search_users(req: SearchRequest):
-    results = model.search(req.query, req.users)
+    results = model.search(req.query, req.users, req.criteria)
     return {"results": results}
-
-
-
-
-
-
-
-
-        # GIVING RESULTS FROM CSV DATA 
-# from fastapi import FastAPI
-# from pydantic import BaseModel
-# from model import SkillSyncModel
-
-# app = FastAPI()
-
-# # Load model once
-# model = SkillSyncModel("data.csv")  # rename your CSV here
-
-# class SearchRequest(BaseModel):
-#     query: str
-
-# @app.post("/search")
-# def search_users(req: SearchRequest):
-#     results = model.search(req.query)
-#     return {"results": results}
