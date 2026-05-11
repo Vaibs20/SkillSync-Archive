@@ -14,7 +14,7 @@
     "clsx": "^2.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.0",
-    "next": "15.3.8",
+    "next": "15.3.1",
     "nodemailer": "^6.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
